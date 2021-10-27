@@ -1426,7 +1426,9 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
     function translate(position, preventLoop) {
       if (!Splide2.is(FADE)) {
-        list.style.transform = "translate" + resolve("X") + "(" + (preventLoop ? position : loop(position)) + "px)";
+        var translateDirection = resolve("X");
+        var translatePosition = preventLoop ? position : loop(position);
+        list.style.transform = "translate3d(" + (translateDirection === "Y" ? "0" : translatePosition) + "px, " + (translateDirection === "X" ? "0" : translatePosition) + "px, 0)";
       }
     }
 

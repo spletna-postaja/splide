@@ -134,7 +134,10 @@ export function Move( Splide: Splide, Components: Components, options: Options )
    */
   function translate( position: number, preventLoop?: boolean ): void {
     if ( ! Splide.is( FADE ) ) {
-      list.style.transform = `translate${ resolve( 'X' ) }(${ preventLoop ? position : loop( position ) }px)`;
+      const translateDirection = resolve( 'X' );
+      const translatePosition  = preventLoop ? position : loop( position );
+
+      list.style.transform = `translate3d(${ translateDirection === 'Y' ? '0' : translatePosition }px, ${ translateDirection === 'X' ? '0' : translatePosition }px, 0)`;
     }
   }
 
