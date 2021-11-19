@@ -680,10 +680,15 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       }
     }
 
+    function get() {
+      return options;
+    }
+
     return {
       setup: setup,
       mount: mount,
-      destroy: destroy
+      destroy: destroy,
+      get: get
     };
   }
 

@@ -127,9 +127,17 @@ export function Options( Splide: Splide, Components: Components, options: Option
     }
   }
 
+  /**
+   * Get defined options.
+   */
+  function get(): Object {
+      return options;
+  }
+
   return {
     setup,
     mount,
     destroy,
+    get,
   };
 }
