@@ -1,3 +1,5 @@
+import { SCROLL_LISTENER_OPTIONS } from '../../constants/listener-options';
+import { MOVING } from '../../constants/states';
 import { EventInterface } from '../../constructors';
 import { Splide } from '../../core/Splide/Splide';
 import { BaseComponent, Components, Options } from '../../types';
@@ -31,22 +33,38 @@ export function Wheel( Splide: Splide, Components: Components, options: Options 
    */
   function mount(): void {
     if ( options.wheel ) {
-      bind( Components.Elements.track, 'wheel', onWheel, { passive: false, capture: true } );
+      bind( Components.Elements.track, 'wheel', onWheel, SCROLL_LISTENER_OPTIONS );
     }
   }
 
   /**
-   * Called when the user rotates the mouse wheel.
+   * Called when the user rotates the mouse wheel on the slider.
    *
    * @param e - A WheelEvent object.
    */
   function onWheel( e: WheelEvent ): void {
-    const { deltaY } = e;
+    if ( e.cancelable ) {
+      const { deltaY } = e;
 
-    if ( deltaY ) {
-      Splide.go( deltaY < 0 ? '<' : '>' );
-      prevent( e );
+      if ( deltaY ) {
+        const backwards = deltaY < 0;
+        Splide.go( backwards ? '<' : '>' );
+        shouldPrevent( backwards ) && prevent( e );
+      }
     }
+  }
+
+  /**
+   * Checks whether the component should prevent the default action of the wheel event or not.
+   *
+   * @param backwards - Set this to `true` for backwards direction.
+   *
+   * @return `true` if the action should be prevented.
+   */
+  function shouldPrevent( backwards: boolean ): boolean {
+    return ! options.releaseWheel
+      || Splide.state.is( MOVING )
+      || Components.Controller.getAdjacent( backwards ) !== -1;
   }
 
   return {

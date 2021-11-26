@@ -4,7 +4,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 /*!
  * Splide.js
- * Version  : 3.2.1
+ * Version  : 3.6.4
  * License  : MIT
  * Copyright: 2021 Naotoshi Fujita
  */
@@ -118,7 +118,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
   }
 
   function matches(elm, selector) {
-    return (elm["msMatchesSelector"] || elm.matches).call(elm, selector);
+    return isHTMLElement(elm) && (elm["msMatchesSelector"] || elm.matches).call(elm, selector);
   }
 
   function children(parent, selector) {
@@ -418,6 +418,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
   var EVENT_READY = "ready";
   var EVENT_MOVE = "move";
   var EVENT_MOVED = "moved";
+  var EVENT_SHIFTED = "shifted";
   var EVENT_CLICK = "click";
   var EVENT_ACTIVE = "active";
   var EVENT_INACTIVE = "inactive";
@@ -566,6 +567,10 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       paused = true;
     }
 
+    function set(time) {
+      interval = time;
+    }
+
     function isPaused() {
       return paused;
     }
@@ -575,6 +580,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       rewind: rewind,
       pause: pause,
       cancel: cancel,
+      set: set,
       isPaused: isPaused
     };
   }
@@ -885,33 +891,18 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     var destroyed;
 
     function mount() {
-      var _this2 = this;
-
-      init();
-      bind(slide, "click keydown", function (e) {
-        emit(e.type === "click" ? EVENT_CLICK : EVENT_SLIDE_KEYDOWN, _this2, e);
-      });
-      on([EVENT_REFRESH, EVENT_REPOSITIONED, EVENT_MOVED, EVENT_SCROLLED], update.bind(this));
-
-      if (updateOnMove) {
-        on(EVENT_MOVE, onMove.bind(this));
-      }
-    }
-
-    function init() {
       if (!isClone) {
         slide.id = root.id + "-slide" + pad(index + 1);
       }
 
-      if (isNavigation) {
-        var idx = isClone ? slideIndex : index;
-        var label = format(options.i18n.slideX, idx + 1);
-        var controls = Splide2.splides.map(function (splide) {
-          return splide.root.id;
-        }).join(" ");
-        setAttribute(slide, ARIA_LABEL, label);
-        setAttribute(slide, ARIA_CONTROLS, controls);
-        setAttribute(slide, ROLE, "menuitem");
+      bind(slide, "click keydown", function (e) {
+        emit(e.type === "click" ? EVENT_CLICK : EVENT_SLIDE_KEYDOWN, self, e);
+      });
+      on([EVENT_REFRESH, EVENT_REPOSITIONED, EVENT_SHIFTED, EVENT_MOVED, EVENT_SCROLLED], update);
+      on(EVENT_NAVIGATION_MOUNTED, initNavigation);
+
+      if (updateOnMove) {
+        on(EVENT_MOVE, onMove);
       }
     }
 
@@ -923,21 +914,29 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       setAttribute(slide, "style", styles);
     }
 
-    function onMove(next, prev, dest) {
-      if (!destroyed) {
-        update.call(this);
+    function initNavigation() {
+      var idx = isClone ? slideIndex : index;
+      var label = format(options.i18n.slideX, idx + 1);
+      var controls = Splide2.splides.map(function (target) {
+        return target.splide.root.id;
+      }).join(" ");
+      setAttribute(slide, ARIA_LABEL, label);
+      setAttribute(slide, ARIA_CONTROLS, controls);
+      setAttribute(slide, ROLE, "menuitem");
+      updateActivity(isActive());
+    }
 
-        if (dest === index) {
-          updateActivity.call(this, true);
-        }
+    function onMove() {
+      if (!destroyed) {
+        update();
       }
     }
 
     function update() {
       if (!destroyed) {
         var currIndex = Splide2.index;
-        updateActivity.call(this, isActive());
-        updateVisibility.call(this, isVisible());
+        updateActivity(isActive());
+        updateVisibility(isVisible());
         toggleClass(slide, CLASS_PREV, index === currIndex - 1);
         toggleClass(slide, CLASS_NEXT, index === currIndex + 1);
       }
@@ -951,24 +950,24 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
           setAttribute(slide, ARIA_CURRENT, active || null);
         }
 
-        emit(active ? EVENT_ACTIVE : EVENT_INACTIVE, this);
+        emit(active ? EVENT_ACTIVE : EVENT_INACTIVE, self);
       }
     }
 
     function updateVisibility(visible) {
-      var ariaHidden = !visible && !isActive();
-      setAttribute(slide, ARIA_HIDDEN, ariaHidden || null);
-      setAttribute(slide, TAB_INDEX, !ariaHidden && options.slideFocus ? 0 : null);
+      var hidden = !visible && (!isActive() || isClone);
+      setAttribute(slide, ARIA_HIDDEN, hidden || null);
+      setAttribute(slide, TAB_INDEX, !hidden && options.slideFocus ? 0 : null);
 
       if (focusableNodes) {
         focusableNodes.forEach(function (node) {
-          setAttribute(node, TAB_INDEX, ariaHidden ? -1 : null);
+          setAttribute(node, TAB_INDEX, hidden ? -1 : null);
         });
       }
 
       if (visible !== hasClass(slide, CLASS_VISIBLE)) {
         toggleClass(slide, CLASS_VISIBLE, visible);
-        emit(visible ? EVENT_VISIBLE : EVENT_HIDDEN, this);
+        emit(visible ? EVENT_VISIBLE : EVENT_HIDDEN, self);
       }
     }
 
@@ -977,7 +976,8 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     }
 
     function isActive() {
-      return Splide2.index === index;
+      var curr = Splide2.index;
+      return curr === index || options.cloneStatus && curr === slideIndex;
     }
 
     function isVisible() {
@@ -1002,7 +1002,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       return diff <= distance;
     }
 
-    return {
+    var self = {
       index: index,
       slideIndex: slideIndex,
       slide: slide,
@@ -1010,9 +1010,11 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       isClone: isClone,
       mount: mount,
       destroy: destroy,
+      update: update,
       style: style$1,
       isWithin: isWithin
     };
+    return self;
   }
 
   function Slides(Splide2, Components2, options) {
@@ -1052,6 +1054,12 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     function refresh() {
       destroy();
       init();
+    }
+
+    function update() {
+      forEach$1(function (Slide2) {
+        Slide2.update();
+      });
     }
 
     function register(slide, index, slideIndex) {
@@ -1146,6 +1154,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     return {
       mount: mount,
       destroy: destroy,
+      update: update,
       register: register,
       get: get,
       getIn: getIn,
@@ -1169,10 +1178,12 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     var Slides = Components2.Slides;
     var resolve = Components2.Direction.resolve;
     var _Components2$Elements2 = Components2.Elements,
+        root = _Components2$Elements2.root,
         track = _Components2$Elements2.track,
         list = _Components2$Elements2.list;
     var getAt = Slides.getAt;
     var vertical;
+    var rootRect;
 
     function mount() {
       init();
@@ -1182,19 +1193,25 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     }
 
     function init() {
+      rootRect = null;
       vertical = options.direction === TTB;
-      style(Splide2.root, "maxWidth", unit(options.width));
+      style(root, "maxWidth", unit(options.width));
       style(track, resolve("paddingLeft"), cssPadding(false));
       style(track, resolve("paddingRight"), cssPadding(true));
       resize();
     }
 
     function resize() {
-      style(track, "height", cssTrackHeight());
-      Slides.style(resolve("marginRight"), unit(options.gap));
-      Slides.style("width", cssSlideWidth() || null);
-      setSlidesHeight();
-      emit(EVENT_RESIZED);
+      var newRect = rect(root);
+
+      if (!rootRect || rootRect.width !== newRect.width || rootRect.height !== newRect.height) {
+        style(track, "height", cssTrackHeight());
+        Slides.style(resolve("marginRight"), unit(options.gap));
+        Slides.style("width", cssSlideWidth() || null);
+        setSlidesHeight();
+        rootRect = newRect;
+        emit(EVENT_RESIZED);
+      }
     }
 
     function setSlidesHeight() {
@@ -1203,7 +1220,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
     function cssPadding(right) {
       var padding = options.padding;
-      var prop = resolve(right ? "right" : "left", true);
+      var prop = resolve(right ? "right" : "left");
       return padding && unit(padding[prop] || (isObject(padding) ? 0 : padding)) || "0px";
     }
 
@@ -1267,7 +1284,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     }
 
     function getPadding(right) {
-      return parseFloat(style(track, resolve("padding" + (right ? "Right" : "Left"), true))) || 0;
+      return parseFloat(style(track, resolve("padding" + (right ? "Right" : "Left")))) || 0;
     }
 
     return {
@@ -1384,9 +1401,10 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     var _Components2$Elements3 = Components2.Elements,
         list = _Components2$Elements3.list,
         track = _Components2$Elements3.track;
-    var waiting;
+    var Transition;
 
     function mount() {
+      Transition = Components2.Transition;
       on([EVENT_MOUNTED, EVENT_RESIZED, EVENT_UPDATED, EVENT_REFRESH], reposition);
     }
 
@@ -1395,7 +1413,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     }
 
     function reposition() {
-      if (!isBusy() && !Components2.Drag.isDragging()) {
+      if (!isBusy()) {
         Components2.Scroll.cancel();
         jump(Splide2.index);
         emit(EVENT_REPOSITIONED);
@@ -1406,13 +1424,15 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       if (!isBusy()) {
         var set = Splide2.state.set;
         var position = getPosition();
-        var looping = dest !== index;
-        waiting = looping || options.waitForTransition;
+
+        if (dest !== index) {
+          Transition.cancel();
+          translate(shift(position, dest > index), true);
+        }
+
         set(MOVING);
         emit(EVENT_MOVE, index, prev, dest);
-        Components2.Transition.start(dest, function () {
-          looping && jump(index);
-          waiting = false;
+        Transition.start(index, function () {
           set(IDLE);
           emit(EVENT_MOVED, index, prev, dest);
 
@@ -1434,11 +1454,12 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
         var translateDirection = resolve("X");
         var translatePosition = preventLoop ? position : loop(position);
         list.style.transform = "translate3d(" + (translateDirection === "Y" ? "0" : translatePosition) + "px, " + (translateDirection === "X" ? "0" : translatePosition) + "px, 0)";
+        position !== translatePosition && emit(EVENT_SHIFTED);
       }
     }
 
     function loop(position) {
-      if (!waiting && Splide2.is(LOOP)) {
+      if (Splide2.is(LOOP)) {
         var diff = orient(position - getPosition());
         var exceededMin = exceededLimit(false, position) && diff < 0;
         var exceededMax = exceededLimit(true, position) && diff > 0;
@@ -1454,14 +1475,13 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     function shift(position, backwards) {
       var excess = position - getLimit(backwards);
       var size = sliderSize();
-      position -= sign(excess) * size * ceil(abs(excess) / size);
+      position -= orient(size * (ceil(abs(excess) / size) || 1)) * (backwards ? 1 : -1);
       return position;
     }
 
     function cancel() {
-      waiting = false;
       translate(getPosition());
-      Components2.Transition.cancel();
+      Transition.cancel();
     }
 
     function toIndex(position) {
@@ -1512,7 +1532,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     }
 
     function isBusy() {
-      return !!waiting;
+      return Splide2.state.is(MOVING) && options.waitForTransition;
     }
 
     function exceededLimit(max, position) {
@@ -1608,11 +1628,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
           index = getPrev(true);
         }
       } else {
-        if (isLoop) {
-          index = clamp(control, -perPage, slideCount + perPage - 1);
-        } else {
-          index = clamp(control, 0, getEnd());
-        }
+        index = isLoop ? control : clamp(control, 0, getEnd());
       }
 
       return index;
@@ -1648,7 +1664,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
             dest = toIndex(toPage(dest));
           } else {
             if (isLoop) {
-              dest = perMove ? dest : dest < 0 ? -(slideCount % perPage || perPage) : slideCount;
+              dest = perMove || hasFocus() ? dest : dest < 0 ? -(slideCount % perPage || perPage) : slideCount;
             } else if (options.rewind) {
               dest = dest < 0 ? end : 0;
             } else {
@@ -1656,7 +1672,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
             }
           }
         } else {
-          if (!isLoop && !incremental && dest !== from) {
+          if (!incremental && dest !== from) {
             dest = perMove ? dest : toIndex(toPage(from) + (dest < from ? -1 : 1));
           }
         }
@@ -1724,6 +1740,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       scroll: scroll,
       getNext: getNext,
       getPrev: getPrev,
+      getAdjacent: getAdjacent,
       getEnd: getEnd,
       setIndex: setIndex,
       getIndex: getIndex,
@@ -1835,15 +1852,17 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     };
   }
 
+  var INTERVAL_DATA_ATTRIBUTE = DATA_ATTRIBUTE + "-interval";
+
   function Autoplay(Splide2, Components2, options) {
     var _EventInterface9 = EventInterface(Splide2),
         on = _EventInterface9.on,
         bind = _EventInterface9.bind,
         emit = _EventInterface9.emit;
 
-    var Elements = Components2.Elements;
     var interval = RequestInterval(options.interval, Splide2.go.bind(Splide2, ">"), update);
     var isPaused = interval.isPaused;
+    var Elements = Components2.Elements;
     var hovered;
     var focused;
     var paused;
@@ -1891,6 +1910,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       }
 
       on([EVENT_MOVE, EVENT_SCROLL, EVENT_REFRESH], interval.rewind);
+      on(EVENT_MOVE, updateInterval);
     }
 
     function play() {
@@ -1926,12 +1946,13 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
     function update(rate) {
       var bar = Elements.bar;
-
-      if (bar) {
-        style(bar, "width", rate * 100 + "%");
-      }
-
+      bar && style(bar, "width", rate * 100 + "%");
       emit(EVENT_AUTOPLAY_PLAYING, rate);
+    }
+
+    function updateInterval() {
+      var Slide = Components2.Slides.getAt(Splide2.index);
+      interval.set(Slide && +getAttribute(Slide.slide, INTERVAL_DATA_ATTRIBUTE) || options.interval);
     }
 
     return {
@@ -2074,6 +2095,10 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     };
   }
 
+  var SCROLL_LISTENER_OPTIONS = {
+    passive: false,
+    capture: true
+  };
   var FRICTION = 5;
   var LOG_INTERVAL = 200;
   var POINTER_DOWN_EVENTS = "touchstart mousedown";
@@ -2096,10 +2121,6 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
         orient = _Components2$Directio2.orient;
     var getPosition = Move.getPosition,
         exceededLimit = Move.exceededLimit;
-    var listenerOptions = {
-      passive: false,
-      capture: true
-    };
     var basePosition;
     var baseEvent;
     var prevBaseEvent;
@@ -2112,9 +2133,9 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     var target;
 
     function mount() {
-      bind(track, POINTER_MOVE_EVENTS, noop, listenerOptions);
-      bind(track, POINTER_UP_EVENTS, noop, listenerOptions);
-      bind(track, POINTER_DOWN_EVENTS, onPointerDown, listenerOptions);
+      bind(track, POINTER_MOVE_EVENTS, noop, SCROLL_LISTENER_OPTIONS);
+      bind(track, POINTER_UP_EVENTS, noop, SCROLL_LISTENER_OPTIONS);
+      bind(track, POINTER_DOWN_EVENTS, onPointerDown, SCROLL_LISTENER_OPTIONS);
       bind(track, "click", onClick, {
         capture: true
       });
@@ -2130,16 +2151,18 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
     function onPointerDown(e) {
       if (!disabled) {
+        var noDrag = options.noDrag;
         var isTouch = isTouchEvent(e);
+        var isDraggable = !noDrag || !matches(e.target, noDrag);
 
-        if (isTouch || !e.button) {
+        if (isDraggable && (isTouch || !e.button)) {
           if (!Move.isBusy()) {
             target = isTouch ? track : window;
             prevBaseEvent = null;
             lastEvent = null;
             clickPrevented = false;
-            bind(target, POINTER_MOVE_EVENTS, onPointerMove, listenerOptions);
-            bind(target, POINTER_UP_EVENTS, onPointerUp, listenerOptions);
+            bind(target, POINTER_MOVE_EVENTS, onPointerMove, SCROLL_LISTENER_OPTIONS);
+            bind(target, POINTER_UP_EVENTS, onPointerUp, SCROLL_LISTENER_OPTIONS);
             Move.cancel();
             Scroll.cancel();
             save(e);
@@ -2158,7 +2181,10 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       lastEvent = e;
 
       if (e.cancelable) {
+        var diff = coordOf(e) - coordOf(baseEvent);
+
         if (dragging) {
+          Move.translate(basePosition + constrain(diff));
           var expired = timeOf(e) - timeOf(baseEvent) > LOG_INTERVAL;
           var exceeded = hasExceeded !== (hasExceeded = exceededLimit());
 
@@ -2166,18 +2192,16 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
             save(e);
           }
 
-          Move.translate(basePosition + constrain(coordOf(e) - coordOf(baseEvent)));
           emit(EVENT_DRAGGING);
           clickPrevented = true;
           prevent(e);
         } else {
-          var diff = abs(coordOf(e) - coordOf(baseEvent));
           var thresholds = options.dragMinThreshold;
           thresholds = isObject(thresholds) ? thresholds : {
             mouse: 0,
             touch: +thresholds || 10
           };
-          dragging = diff > (isTouchEvent(e) ? thresholds.touch : thresholds.mouse);
+          dragging = abs(diff) > (isTouchEvent(e) ? thresholds.touch : thresholds.mouse);
 
           if (isSliderDirection()) {
             prevent(e);
@@ -2189,6 +2213,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     function onPointerUp(e) {
       unbind(target, POINTER_MOVE_EVENTS, onPointerMove);
       unbind(target, POINTER_UP_EVENTS, onPointerUp);
+      var index = Splide2.index;
 
       if (lastEvent) {
         if (dragging || e.cancelable && isSliderDirection()) {
@@ -2198,7 +2223,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
           if (isFree) {
             Controller.scroll(destination);
           } else if (Splide2.is(FADE)) {
-            Controller.go(Splide2.index + orient(sign(velocity)));
+            Controller.go(index + orient(sign(velocity)));
           } else {
             Controller.go(Controller.toDest(destination), true);
           }
@@ -2207,6 +2232,10 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
         }
 
         emit(EVENT_DRAGGED);
+      } else {
+        if (!isFree && getPosition() !== Move.toPosition(index)) {
+          Controller.go(index, true);
+        }
       }
 
       dragging = false;
@@ -2281,6 +2310,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
   }
 
   var IE_ARROW_KEYS = ["Left", "Right", "Up", "Down"];
+  var KEYBOARD_EVENT = "keydown";
 
   function Keyboard(Splide2, Components2, options) {
     var _EventInterface13 = EventInterface(Splide2),
@@ -2288,21 +2318,19 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
         bind = _EventInterface13.bind,
         unbind = _EventInterface13.unbind;
 
-    var root = Components2.Elements.root;
+    var root = Splide2.root;
     var resolve = Components2.Direction.resolve;
     var target;
+    var disabled;
 
     function mount() {
       init();
-      on(EVENT_UPDATED, function () {
-        destroy();
-        init();
-      });
+      on(EVENT_UPDATED, onUpdated);
+      on(EVENT_MOVE, onMove);
     }
 
     function init() {
-      var _options$keyboard = options.keyboard,
-          keyboard = _options$keyboard === void 0 ? "global" : _options$keyboard;
+      var keyboard = options.keyboard;
 
       if (keyboard) {
         if (keyboard === "focused") {
@@ -2312,32 +2340,52 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
           target = window;
         }
 
-        bind(target, "keydown", onKeydown);
+        bind(target, KEYBOARD_EVENT, onKeydown);
       }
     }
 
     function destroy() {
-      unbind(target, "keydown");
+      unbind(target, KEYBOARD_EVENT);
 
       if (isHTMLElement(target)) {
         removeAttribute(target, TAB_INDEX);
       }
     }
 
-    function onKeydown(e) {
-      var key = e.key;
-      var normalizedKey = includes(IE_ARROW_KEYS, key) ? "Arrow" + key : key;
+    function disable(value) {
+      disabled = value;
+    }
 
-      if (normalizedKey === resolve("ArrowLeft")) {
-        Splide2.go("<");
-      } else if (normalizedKey === resolve("ArrowRight")) {
-        Splide2.go(">");
+    function onMove() {
+      var _disabled = disabled;
+      disabled = true;
+      nextTick(function () {
+        disabled = _disabled;
+      });
+    }
+
+    function onUpdated() {
+      destroy();
+      init();
+    }
+
+    function onKeydown(e) {
+      if (!disabled) {
+        var key = e.key;
+        var normalizedKey = includes(IE_ARROW_KEYS, key) ? "Arrow" + key : key;
+
+        if (normalizedKey === resolve("ArrowLeft")) {
+          Splide2.go("<");
+        } else if (normalizedKey === resolve("ArrowRight")) {
+          Splide2.go(">");
+        }
       }
     }
 
     return {
       mount: mount,
-      destroy: destroy
+      destroy: destroy,
+      disable: disable
     };
   }
 
@@ -2358,15 +2406,18 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
     function mount() {
       if (options.lazyLoad) {
-        on([EVENT_MOUNTED, EVENT_REFRESH], function () {
-          destroy();
-          init();
-        });
+        init();
+        on(EVENT_REFRESH, refresh);
 
         if (!isSequential) {
-          on([EVENT_MOUNTED, EVENT_REFRESH, EVENT_MOVED], observe);
+          on([EVENT_MOUNTED, EVENT_REFRESH, EVENT_MOVED, EVENT_SCROLLED], observe);
         }
       }
+    }
+
+    function refresh() {
+      destroy();
+      init();
     }
 
     function init() {
@@ -2376,7 +2427,10 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
           var srcset = getAttribute(_img, SRCSET_DATA_ATTRIBUTE);
 
           if (src !== _img.src || srcset !== _img.srcset) {
-            var _spinner = create("span", options.classes.spinner, _img.parentElement);
+            var className = options.classes.spinner;
+            var parent = _img.parentElement;
+
+            var _spinner = child(parent, "." + className) || create("span", className, parent);
 
             setAttribute(_spinner, ROLE, "presentation");
             images.push({
@@ -2434,9 +2488,9 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     function onLoad(data, error) {
       var _Slide = data._Slide;
       removeClass(_Slide.slide, CLASS_LOADING);
+      remove(data._spinner);
 
       if (!error) {
-        remove(data._spinner);
         display(data._img, "");
         emit(EVENT_LAZYLOAD_LOADED, data._img, _Slide);
         emit(EVENT_RESIZE);
@@ -2569,53 +2623,60 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       items: items,
       mount: mount,
       destroy: destroy,
-      getAt: getAt
+      getAt: getAt,
+      update: update
     };
   }
 
   var TRIGGER_KEYS = [" ", "Enter", "Spacebar"];
 
   function Sync(Splide2, Components2, options) {
-    var splides = Splide2.splides;
     var list = Components2.Elements.list;
+    var events = [];
 
     function mount() {
+      Splide2.splides.forEach(function (target) {
+        !target.isParent && sync(target.splide);
+      });
+
       if (options.isNavigation) {
         navigate();
-      } else {
-        sync();
       }
     }
 
     function destroy() {
       removeAttribute(list, ALL_ATTRIBUTES);
+      events.forEach(function (event) {
+        event.destroy();
+      });
+      empty(events);
     }
 
-    function sync() {
-      var processed = [];
-      splides.concat(Splide2).forEach(function (splide, index, instances) {
-        EventInterface(splide).on(EVENT_MOVE, function (index2, prev, dest) {
-          instances.forEach(function (instance) {
-            if (instance !== splide && !includes(processed, splide)) {
-              processed.push(instance);
-              instance.go(instance.is(LOOP) ? dest : index2);
-            }
-          });
-          empty(processed);
+    function remount() {
+      destroy();
+      mount();
+    }
+
+    function sync(splide) {
+      [Splide2, splide].forEach(function (instance) {
+        var event = EventInterface(instance);
+        var target = instance === Splide2 ? splide : Splide2;
+        event.on(EVENT_MOVE, function (index, prev, dest) {
+          target.go(target.is(LOOP) ? dest : index);
         });
+        events.push(event);
       });
     }
 
     function navigate() {
-      var _EventInterface16 = EventInterface(Splide2),
-          on = _EventInterface16.on,
-          emit = _EventInterface16.emit;
-
+      var event = EventInterface(Splide2);
+      var on = event.on;
       on(EVENT_CLICK, onClick);
       on(EVENT_SLIDE_KEYDOWN, onKeydown);
       on([EVENT_MOUNTED, EVENT_UPDATED], update);
       setAttribute(list, ROLE, "menu");
-      emit(EVENT_NAVIGATION_MOUNTED, Splide2.splides);
+      events.push(event);
+      event.emit(EVENT_NAVIGATION_MOUNTED, Splide2.splides);
     }
 
     function update() {
@@ -2635,30 +2696,35 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
     return {
       mount: mount,
-      destroy: destroy
+      destroy: destroy,
+      remount: remount
     };
   }
 
   function Wheel(Splide2, Components2, options) {
-    var _EventInterface17 = EventInterface(Splide2),
-        bind = _EventInterface17.bind;
+    var _EventInterface16 = EventInterface(Splide2),
+        bind = _EventInterface16.bind;
 
     function mount() {
       if (options.wheel) {
-        bind(Components2.Elements.track, "wheel", onWheel, {
-          passive: false,
-          capture: true
-        });
+        bind(Components2.Elements.track, "wheel", onWheel, SCROLL_LISTENER_OPTIONS);
       }
     }
 
     function onWheel(e) {
-      var deltaY = e.deltaY;
+      if (e.cancelable) {
+        var deltaY = e.deltaY;
 
-      if (deltaY) {
-        Splide2.go(deltaY < 0 ? "<" : ">");
-        prevent(e);
+        if (deltaY) {
+          var backwards = deltaY < 0;
+          Splide2.go(backwards ? "<" : ">");
+          shouldPrevent(backwards) && prevent(e);
+        }
       }
+    }
+
+    function shouldPrevent(backwards) {
+      return !options.releaseWheel || Splide2.state.is(MOVING) || Components2.Controller.getAdjacent(backwards) !== -1;
     }
 
     return {
@@ -2702,12 +2768,14 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     speed: 400,
     waitForTransition: true,
     perPage: 1,
+    cloneStatus: true,
     arrows: true,
     pagination: true,
     interval: 5e3,
     pauseOnHover: true,
     pauseOnFocus: true,
     resetProgress: true,
+    keyboard: true,
     easing: "cubic-bezier(0.25, 1, 0.5, 1)",
     drag: true,
     direction: "ltr",
@@ -2719,8 +2787,8 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
   };
 
   function Fade(Splide2, Components2, options) {
-    var _EventInterface18 = EventInterface(Splide2),
-        on = _EventInterface18.on;
+    var _EventInterface17 = EventInterface(Splide2),
+        on = _EventInterface17.on;
 
     function mount() {
       on([EVENT_MOUNTED, EVENT_REFRESH], function () {
@@ -2747,8 +2815,8 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
   }
 
   function Slide(Splide2, Components2, options) {
-    var _EventInterface19 = EventInterface(Splide2),
-        bind = _EventInterface19.bind;
+    var _EventInterface18 = EventInterface(Splide2),
+        bind = _EventInterface18.bind;
 
     var Move = Components2.Move,
         Controller = Components2.Controller;
@@ -2827,7 +2895,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     var _proto = _Splide.prototype;
 
     _proto.mount = function mount(Extensions, Transition) {
-      var _this3 = this;
+      var _this2 = this;
 
       var state = this.state,
           Components2 = this.Components;
@@ -2840,7 +2908,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
         Transition: this._Transition
       });
       forOwn(Constructors, function (Component, key) {
-        var component = Component(_this3, Components2, _this3._options);
+        var component = Component(_this2, Components2, _this2._options);
         Components2[key] = component;
         component.setup && component.setup();
       });
@@ -2855,8 +2923,20 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     };
 
     _proto.sync = function sync(splide) {
-      this.splides.push(splide);
-      splide.splides.push(this);
+      this.splides.push({
+        splide: splide
+      });
+      splide.splides.push({
+        splide: this,
+        isParent: true
+      });
+
+      if (this.state.is(IDLE)) {
+        this._Components.Sync.remount();
+
+        splide.Components.Sync.remount();
+      }
+
       return this;
     };
 

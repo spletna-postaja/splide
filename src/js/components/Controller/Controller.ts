@@ -17,6 +17,7 @@ export interface ControllerComponent extends BaseComponent {
   scroll( destination: number, useIndex?: boolean, snap?: boolean, duration?: number, callback?: AnyFunction ): void;
   getNext( destination?: boolean ): number;
   getPrev( destination?: boolean ): number;
+  getAdjacent( prev: boolean, destination?: boolean ): number;
   getEnd(): number;
   setIndex( index: number ): void;
   getIndex( prev?: boolean ): number;
@@ -158,11 +159,7 @@ export function Controller( Splide: Splide, Components: Components, options: Opt
         index = getPrev( true );
       }
     } else {
-      if ( isLoop ) {
-        index = clamp( control, -perPage, slideCount + perPage - 1 );
-      } else {
-        index = clamp( control, 0, getEnd() );
-      }
+      index = isLoop ? control : clamp( control, 0, getEnd() );
     }
 
     return index;
@@ -192,6 +189,8 @@ export function Controller( Splide: Splide, Components: Components, options: Opt
 
   /**
    * Returns an adjacent destination index.
+   *
+   * @internal
    *
    * @param prev        - Determines whether to return a previous or next index.
    * @param destination - Optional. Determines whether to get a destination index or a slide one.
@@ -233,7 +232,7 @@ export function Controller( Splide: Splide, Components: Components, options: Opt
           dest = toIndex( toPage( dest ) );
         } else {
           if ( isLoop ) {
-            dest = perMove
+            dest = perMove || hasFocus()
               ? dest
               : dest < 0 ? - ( slideCount % perPage || perPage ) : slideCount;
           } else if ( options.rewind ) {
@@ -243,7 +242,7 @@ export function Controller( Splide: Splide, Components: Components, options: Opt
           }
         }
       } else {
-        if ( ! isLoop && ! incremental && dest !== from ) {
+        if ( ! incremental && dest !== from ) {
           dest = perMove ? dest : toIndex( toPage( from ) + ( dest < from ? -1 : 1 ) );
         }
       }
@@ -359,6 +358,7 @@ export function Controller( Splide: Splide, Components: Components, options: Opt
     scroll,
     getNext,
     getPrev,
+    getAdjacent,
     getEnd,
     setIndex,
     getIndex,

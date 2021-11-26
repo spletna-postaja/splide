@@ -13,7 +13,7 @@ $settings = get_settings();
   <title>Multiple</title>
 
   <link rel="stylesheet" href="../../../../../dist/css/splide-core.min.css">
-<!--  <link rel="stylesheet" href="../../../../../dist/css/themes/splide---><?php //echo $settings['theme'] ?><!--.min.css">-->
+  <link rel="stylesheet" href="../../../../../dist/css/themes/splide-<?php echo $settings['theme'] ?>.min.css">
   <link rel="stylesheet" href="../../assets/css/styles.css">
   <script type="text/javascript" src="../../../../../dist/js/splide.js"></script>
 
@@ -138,6 +138,17 @@ $settings = get_settings();
 <?php render( 'splide07' ); ?>
 <?php render( 'splide08' ); ?>
 <?php render( 'splide09' ); ?>
+
+<script>
+  Array.from( document.querySelectorAll( '.splide' ) ).forEach( elm => {
+    const splide   = new Splide( elm, { rewind: true, interval: 1000 } ).mount();
+    const Autoplay = splide.Components.Autoplay;
+    const observer = new IntersectionObserver( ( [ entry ] ) => {
+      entry.isIntersecting ? Autoplay.play() : Autoplay.pause();
+    }, { threshold: 0.8 } );
+    observer.observe( elm );
+  } );
+</script>
 
 </body>
 </html>

@@ -28,9 +28,9 @@ No dependencies, no Lighthouse errors.
   <a href="https://github.com/Splidejs/splide/discussions">Discussions/Q&A</a>
 </p>
 
-<p>
+<h3>
   Ready For
-</p>
+</h3>
 <p>
   <a href="https://splidejs.com/guides/getting-started/">
     <img alt="React Splide" src="./images/javascript-logo.svg" width="30">
@@ -48,13 +48,33 @@ No dependencies, no Lighthouse errors.
     <img alt="Vue Splide" src="./images/svelte-logo.svg" width="30">
   </a>
 </p>
+
+<h3>
+  Extensions
+</h3>
+
+<p>
+  <a href="https://splidejs.com/extensions/auto-scroll/">Auto Scroll</a> ・
+  <a href="https://splidejs.com/extensions/intersection/">Intersection</a> ・
+  <a href="https://splidejs.com/extensions/grid/">Grid</a> ・
+  <a href="https://splidejs.com/extensions/video/">Video</a> ・
+  <a href="https://splidejs.com/extensions/url-hash/">URL Hash</a>
+</p>
+
+<h3>
+  Translation
+</h3>
+
+<p>
+  <a href="https://ja.splidejs.com">日本語</a>
+</p>
 </div>
 
 ## Features
 
 - Written in TypeScript
 - No dependencies
-- Lightweight, 26kB (11kB gzipped)
+- Lightweight, 27kB (11kB gzipped)
 - Flexible and extensible
 - Protected by 300+ test cases
 - Multiple slides
