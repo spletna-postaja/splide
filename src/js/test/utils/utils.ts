@@ -35,12 +35,13 @@ export function init( options: Options = {}, args: InitArgs = {} ): Splide {
     dataSrcset,
     json,
     insertHtml,
+    dataInterval,
   } = args;
 
   const slideWidth  = +width / ( options.perPage || 1 );
   const slideHeight = +height / ( options.perPage || 1 );
   const innerHtml   = html
-    || buildHtml( { length, arrows, autoplay, progress, src, dataSrc, dataSrcset, json, id } );
+    || buildHtml( { length, arrows, autoplay, progress, src, dataSrc, dataSrcset, json, id, dataInterval } );
 
   if ( insertHtml ) {
     if ( ! document.body.innerHTML ) {
@@ -176,7 +177,7 @@ export function keydown( key: string, target: Window | Element = window ): void 
  *
  * @return A Promise instance.
  */
-export function wait( duration: number ): Promise<void> {
+export function wait( duration = 0 ): Promise<void> {
   return new Promise( resolve => {
     setTimeout( resolve, duration );
   } );

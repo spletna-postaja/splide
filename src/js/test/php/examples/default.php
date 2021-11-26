@@ -19,20 +19,17 @@ $settings = get_settings();
   <script>
     document.addEventListener( 'DOMContentLoaded', function () {
       var splide = new Splide( '#splide01', {
-        type   : 'slide',
+        type   : 'loop',
         perPage: 3,
-        // direction: 'ttb',
-        // height: 1000,
-        perMove: 2,
-        rewind: true,
-        // focus: 0,
-        breakpoints: {
-          1000: {
-            destroy: true,
-            // type   : 'fade',
-            // perPage: 1,
-          },
-        },
+        // perMove: 1,
+        // rewind: true,
+        // padding: {
+        //   right: 0,
+        //   left: 40,
+        // },
+        // updateOnMove: true,
+        focus: 'center',
+        noDrag: 'button',
       } );
 
       splide.on( 'moved', () => {
@@ -51,6 +48,10 @@ $settings = get_settings();
         console.log( 'click' );
       } );
 
+      splide.on( 'shifted', () => {
+        console.log( 'shifted' );
+      } );
+
       splide.mount();
     } );
   </script>
@@ -62,8 +63,8 @@ $settings = get_settings();
   </style>
 </head>
 <body>
-2
-<?php render(); ?>
+
+<?php render( 'splide01', 11 ); ?>
 
 <pre></pre>
 

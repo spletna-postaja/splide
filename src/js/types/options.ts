@@ -100,6 +100,11 @@ export interface Options extends ResponsiveOptions {
   wheel?: boolean;
 
   /**
+   * Determines whether to release the wheel event when the slider reaches the first or last slide.
+   */
+  releaseWheel?: boolean;
+
+  /**
    * The direction of the slider.
    * - 'ltr': Left to right
    * - 'rtl': Right to left
@@ -145,7 +150,12 @@ export interface Options extends ResponsiveOptions {
    * The selector to get focusable elements
    * where `tabindex="-1"` will be assigned when their ascendant slide is hidden.
    */
-  focusableNodes?: string,
+  focusableNodes?: string;
+
+  /**
+   * The selector for nodes that cannot be dragged.
+   */
+  noDrag?: string;
 
   /**
    * Determines whether to use the Transition component or not.
@@ -251,6 +261,11 @@ export interface ResponsiveOptions {
    * In most cases, you don't need to provide this value.
    */
   clones?: number;
+
+  /**
+   * Determines whether to clone status classes for clones or not.
+   */
+  cloneStatus?: boolean;
 
   /**
    * Determines which slide should be active if there are multiple slides in a page.

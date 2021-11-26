@@ -1,9 +1,10 @@
 import { EVENT_DRAG, EVENT_DRAGGED, EVENT_DRAGGING, EVENT_MOUNTED, EVENT_UPDATED } from '../../constants/events';
+import { SCROLL_LISTENER_OPTIONS } from '../../constants/listener-options';
 import { FADE, LOOP, SLIDE } from '../../constants/types';
 import { EventInterface } from '../../constructors';
 import { Splide } from '../../core/Splide/Splide';
 import { BaseComponent, Components, Options } from '../../types';
-import { abs, isObject, min, noop, prevent, sign } from '../../utils';
+import { abs, isObject, matches, min, noop, prevent, sign } from '../../utils';
 import { FRICTION, LOG_INTERVAL, POINTER_DOWN_EVENTS, POINTER_MOVE_EVENTS, POINTER_UP_EVENTS } from './constants';
 
 
@@ -34,7 +35,6 @@ export function Drag( Splide: Splide, Components: Components, options: Options )
   const { track } = Components.Elements;
   const { resolve, orient } = Components.Direction;
   const { getPosition, exceededLimit } = Move;
-  const listenerOptions = { passive: false, capture: true };
 
   /**
    * The base slider position to calculate the delta of coords.
@@ -91,9 +91,9 @@ export function Drag( Splide: Splide, Components: Components, options: Options )
    * Called when the component is mounted.
    */
   function mount(): void {
-    bind( track, POINTER_MOVE_EVENTS, noop, listenerOptions );
-    bind( track, POINTER_UP_EVENTS, noop, listenerOptions );
-    bind( track, POINTER_DOWN_EVENTS, onPointerDown, listenerOptions );
+    bind( track, POINTER_MOVE_EVENTS, noop, SCROLL_LISTENER_OPTIONS );
+    bind( track, POINTER_UP_EVENTS, noop, SCROLL_LISTENER_OPTIONS );
+    bind( track, POINTER_DOWN_EVENTS, onPointerDown, SCROLL_LISTENER_OPTIONS );
     bind( track, 'click', onClick, { capture: true } );
     bind( track, 'dragstart', prevent );
 
@@ -118,17 +118,19 @@ export function Drag( Splide: Splide, Components: Components, options: Options )
    */
   function onPointerDown( e: TouchEvent | MouseEvent ): void {
     if ( ! disabled ) {
-      const isTouch = isTouchEvent( e );
+      const { noDrag } = options;
+      const isTouch     = isTouchEvent( e );
+      const isDraggable = ! noDrag || ! matches( e.target, noDrag );
 
-      if ( isTouch || ! e.button ) {
+      if ( isDraggable && ( isTouch || ! e.button ) ) {
         if ( ! Move.isBusy() ) {
           target         = isTouch ? track : window;
           prevBaseEvent  = null;
           lastEvent      = null;
           clickPrevented = false;
 
-          bind( target, POINTER_MOVE_EVENTS, onPointerMove, listenerOptions );
-          bind( target, POINTER_UP_EVENTS, onPointerUp, listenerOptions );
+          bind( target, POINTER_MOVE_EVENTS, onPointerMove, SCROLL_LISTENER_OPTIONS );
+          bind( target, POINTER_UP_EVENTS, onPointerUp, SCROLL_LISTENER_OPTIONS );
           Move.cancel();
           Scroll.cancel();
           save( e );
@@ -152,7 +154,11 @@ export function Drag( Splide: Splide, Components: Components, options: Options )
     lastEvent = e;
 
     if ( e.cancelable ) {
+      const diff = coordOf( e ) - coordOf( baseEvent );
+
       if ( dragging ) {
+        Move.translate( basePosition + constrain( diff ) );
+
         const expired  = timeOf( e ) - timeOf( baseEvent ) > LOG_INTERVAL;
         const exceeded = hasExceeded !== ( hasExceeded = exceededLimit() );
 
@@ -160,15 +166,13 @@ export function Drag( Splide: Splide, Components: Components, options: Options )
           save( e );
         }
 
-        Move.translate( basePosition + constrain( coordOf( e ) - coordOf( baseEvent ) ) );
         emit( EVENT_DRAGGING );
         clickPrevented = true;
         prevent( e );
       } else {
-        const diff = abs( coordOf( e ) - coordOf( baseEvent ) );
         let { dragMinThreshold: thresholds } = options;
         thresholds = isObject( thresholds ) ? thresholds : { mouse: 0, touch: +thresholds || 10 };
-        dragging   = diff > ( isTouchEvent( e ) ? thresholds.touch : thresholds.mouse );
+        dragging   = abs( diff ) > ( isTouchEvent( e ) ? thresholds.touch : thresholds.mouse );
 
         if ( isSliderDirection() ) {
           prevent( e );
@@ -188,6 +192,8 @@ export function Drag( Splide: Splide, Components: Components, options: Options )
     unbind( target, POINTER_MOVE_EVENTS, onPointerMove );
     unbind( target, POINTER_UP_EVENTS, onPointerUp );
 
+    const { index } = Splide;
+
     if ( lastEvent ) {
       if ( dragging || ( e.cancelable && isSliderDirection() ) ) {
         const velocity    = computeVelocity( e );
@@ -196,7 +202,7 @@ export function Drag( Splide: Splide, Components: Components, options: Options )
         if ( isFree ) {
           Controller.scroll( destination );
         } else if ( Splide.is( FADE ) ) {
-          Controller.go( Splide.index + orient( sign( velocity ) ) );
+          Controller.go( index + orient( sign( velocity ) ) );
         } else {
           Controller.go( Controller.toDest( destination ), true );
         }
@@ -205,6 +211,10 @@ export function Drag( Splide: Splide, Components: Components, options: Options )
       }
 
       emit( EVENT_DRAGGED );
+    } else {
+      if ( ! isFree && getPosition() !== Move.toPosition( index ) ) {
+        Controller.go( index, true );
+      }
     }
 
     dragging = false;

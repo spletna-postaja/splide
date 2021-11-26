@@ -9,7 +9,7 @@ import {
   EVENT_UPDATED,
 } from '../../constants/events';
 import { LOOP } from '../../constants/types';
-import { EventInterface } from '../../constructors';
+import { EventInterface, EventInterfaceObject } from '../../constructors';
 import { Splide } from '../../core/Splide/Splide';
 import { BaseComponent, Components, Options } from '../../types';
 import { empty, includes, prevent, removeAttribute, setAttribute } from '../../utils';
@@ -22,6 +22,7 @@ import { SlideComponent } from '../Slides/Slide';
  * @since 3.0.0
  */
 export interface SyncComponent extends BaseComponent {
+  remount(): void;
 }
 
 /**
@@ -43,17 +44,19 @@ const TRIGGER_KEYS = [ ' ', 'Enter', 'Spacebar' ];
  * @return A Sync component object.
  */
 export function Sync( Splide: Splide, Components: Components, options: Options ): SyncComponent {
-  const { splides } = Splide;
   const { list } = Components.Elements;
+  const events: EventInterfaceObject[] = [];
 
   /**
    * Called when the component is mounted.
    */
   function mount(): void {
+    Splide.splides.forEach( target => {
+      ! target.isParent && sync( target.splide );
+    } );
+
     if ( options.isNavigation ) {
       navigate();
-    } else {
-      sync();
     }
   }
 
@@ -62,26 +65,35 @@ export function Sync( Splide: Splide, Components: Components, options: Options )
    */
   function destroy(): void {
     removeAttribute( list, ALL_ATTRIBUTES );
+    events.forEach( event => { event.destroy() } );
+    empty( events );
   }
 
   /**
-   * Syncs the current index among all slides.
-   * The `processed` array prevents recursive call of handlers.
+   * Remounts the component.
+   *
+   * @internal
    */
-  function sync(): void {
-    const processed: Splide[] = [];
+  function remount(): void {
+    destroy();
+    mount();
+  }
 
-    splides.concat( Splide ).forEach( ( splide, index, instances ) => {
-      EventInterface( splide ).on( EVENT_MOVE, ( index, prev, dest ) => {
-        instances.forEach( instance => {
-          if ( instance !== splide && ! includes( processed, splide ) ) {
-            processed.push( instance );
-            instance.go( instance.is( LOOP ) ? dest : index );
-          }
-        } );
+  /**
+   * Syncs the current index with a provided child splide instance.
+   *
+   * @param splide - A splide instance to sync with.
+   */
+  function sync( splide: Splide ): void {
+    [ Splide, splide ].forEach( instance => {
+      const event  = EventInterface( instance );
+      const target = instance === Splide ? splide : Splide;
 
-        empty( processed );
+      event.on( EVENT_MOVE, ( index, prev, dest ) => {
+        target.go( target.is( LOOP ) ? dest : index );
       } );
+
+      events.push( event );
     } );
   }
 
@@ -90,15 +102,16 @@ export function Sync( Splide: Splide, Components: Components, options: Options )
    * Note that the direction of `menu` is implicitly `vertical` as default.
    */
   function navigate(): void {
-    const { on, emit } = EventInterface( Splide );
+    const event = EventInterface( Splide );
+    const { on } = event;
 
     on( EVENT_CLICK, onClick );
     on( EVENT_SLIDE_KEYDOWN, onKeydown );
     on( [ EVENT_MOUNTED, EVENT_UPDATED ], update );
 
     setAttribute( list, ROLE, 'menu' );
-
-    emit( EVENT_NAVIGATION_MOUNTED, Splide.splides );
+    events.push( event );
+    event.emit( EVENT_NAVIGATION_MOUNTED, Splide.splides );
   }
 
   /**
@@ -133,5 +146,6 @@ export function Sync( Splide: Splide, Components: Components, options: Options )
   return {
     mount,
     destroy,
+    remount,
   };
 }

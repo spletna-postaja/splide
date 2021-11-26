@@ -19,21 +19,28 @@ $settings = get_settings();
   <script>
     document.addEventListener( 'DOMContentLoaded', function () {
       var splide = new Splide( '#splide01', {
-        perPage: 3,
+        perPage: 4,
         gap    : '1.5rem',
         drag   : 'free',
-        height : 200,
+        // height : 400,
         type   : 'loop',
         // direction: 'rtl',
+        waitForTransition: false,
       } );
 
       splide.mount();
     } );
   </script>
+
+  <style>
+    body {
+      margin: 50em 0;
+    }
+  </style>
 </head>
 <body>
 
-<?php render(); ?>
+<?php render( 'splide01', 10 ); ?>
 
 </body>
 </html>

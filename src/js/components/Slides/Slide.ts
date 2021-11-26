@@ -22,9 +22,11 @@ import {
   EVENT_INACTIVE,
   EVENT_MOVE,
   EVENT_MOVED,
+  EVENT_NAVIGATION_MOUNTED,
   EVENT_REFRESH,
   EVENT_REPOSITIONED,
   EVENT_SCROLLED,
+  EVENT_SHIFTED,
   EVENT_SLIDE_KEYDOWN,
   EVENT_VISIBLE,
 } from '../../constants/events';
@@ -63,6 +65,7 @@ export interface  SlideComponent extends BaseComponent {
   slide: HTMLElement;
   container: HTMLElement;
   isClone: boolean;
+  update(): void;
   style( prop: string, value: string | number, useContainer?: boolean ): void
   isWithin( from: number, distance: number ): boolean;
 }
@@ -98,35 +101,19 @@ export function Slide( Splide: Splide, index: number, slideIndex: number, slide:
    * Called when the component is mounted.
    */
   function mount( this: SlideComponent ): void {
-    init();
-
-    bind( slide, 'click keydown', e => {
-      emit( e.type === 'click' ? EVENT_CLICK : EVENT_SLIDE_KEYDOWN, this, e );
-    } );
-
-    on( [ EVENT_REFRESH, EVENT_REPOSITIONED, EVENT_MOVED, EVENT_SCROLLED ], update.bind( this ) );
-
-    if ( updateOnMove ) {
-      on( EVENT_MOVE, onMove.bind( this ) );
-    }
-  }
-
-  /**
-   * Initializes the component.
-   */
-  function init(): void {
     if ( ! isClone ) {
       slide.id = `${ root.id }-slide${ pad( index + 1 ) }`;
     }
 
-    if ( isNavigation ) {
-      const idx      = isClone ? slideIndex : index;
-      const label    = format( options.i18n.slideX, idx + 1 );
-      const controls = Splide.splides.map( splide => splide.root.id ).join( ' ' );
+    bind( slide, 'click keydown', e => {
+      emit( e.type === 'click' ? EVENT_CLICK : EVENT_SLIDE_KEYDOWN, self, e );
+    } );
 
-      setAttribute( slide, ARIA_LABEL, label );
-      setAttribute( slide, ARIA_CONTROLS, controls );
-      setAttribute( slide, ROLE, 'menuitem' );
+    on( [ EVENT_REFRESH, EVENT_REPOSITIONED, EVENT_SHIFTED, EVENT_MOVED, EVENT_SCROLLED ], update );
+    on( EVENT_NAVIGATION_MOUNTED, initNavigation );
+
+    if ( updateOnMove ) {
+      on( EVENT_MOVE, onMove );
     }
   }
 
@@ -142,31 +129,38 @@ export function Slide( Splide: Splide, index: number, slideIndex: number, slide:
   }
 
   /**
-   * If the `updateOnMove` option is `true`, called when the slider starts moving.
-   *
-   * @param next - A next index.
-   * @param prev - A previous index.
-   * @param dest - A destination index.
+   * Initializes slides as navigation.
    */
-  function onMove( this: SlideComponent, next: number, prev: number, dest: number ): void {
-    if ( ! destroyed ) {
-      update.call( this );
+  function initNavigation(): void {
+    const idx      = isClone ? slideIndex : index;
+    const label    = format( options.i18n.slideX, idx + 1 );
+    const controls = Splide.splides.map( target => target.splide.root.id ).join( ' ' );
 
-      if ( dest === index ) {
-        updateActivity.call( this, true );
-      }
+    setAttribute( slide, ARIA_LABEL, label );
+    setAttribute( slide, ARIA_CONTROLS, controls );
+    setAttribute( slide, ROLE, 'menuitem' );
+
+    updateActivity( isActive() );
+  }
+
+  /**
+   * If the `updateOnMove` option is `true`, called when the slider starts moving.
+   */
+  function onMove(): void {
+    if ( ! destroyed ) {
+      update();
     }
   }
 
   /**
    * Updates attribute and classes of the slide.
    */
-  function update( this: SlideComponent ): void {
+  function update(): void {
     if ( ! destroyed ) {
       const { index: currIndex } = Splide;
 
-      updateActivity.call( this, isActive() );
-      updateVisibility.call( this, isVisible() );
+      updateActivity( isActive() );
+      updateVisibility( isVisible() );
 
       toggleClass( slide, CLASS_PREV, index === currIndex - 1 );
       toggleClass( slide, CLASS_NEXT, index === currIndex + 1 );
@@ -178,7 +172,7 @@ export function Slide( Splide: Splide, index: number, slideIndex: number, slide:
    *
    * @param active - Set `true` if the slide is active.
    */
-  function updateActivity( this: SlideComponent, active: boolean ): void {
+  function updateActivity( active: boolean ): void {
     if ( active !== hasClass( slide, CLASS_ACTIVE ) ) {
       toggleClass( slide, CLASS_ACTIVE, active );
 
@@ -186,7 +180,7 @@ export function Slide( Splide: Splide, index: number, slideIndex: number, slide:
         setAttribute( slide, ARIA_CURRENT, active || null );
       }
 
-      emit( active ? EVENT_ACTIVE : EVENT_INACTIVE, this );
+      emit( active ? EVENT_ACTIVE : EVENT_INACTIVE, self );
     }
   }
 
@@ -195,21 +189,21 @@ export function Slide( Splide: Splide, index: number, slideIndex: number, slide:
    *
    * @param visible - Set `true` if the slide is visible.
    */
-  function updateVisibility( this: SlideComponent, visible: boolean ): void {
-    const ariaHidden = ! visible && ! isActive();
+  function updateVisibility( visible: boolean ): void {
+    const hidden = ! visible && ( ! isActive() || isClone );
 
-    setAttribute( slide, ARIA_HIDDEN, ariaHidden || null );
-    setAttribute( slide, TAB_INDEX, ! ariaHidden && options.slideFocus ? 0 : null );
+    setAttribute( slide, ARIA_HIDDEN, hidden || null );
+    setAttribute( slide, TAB_INDEX, ! hidden && options.slideFocus ? 0 : null );
 
     if ( focusableNodes ) {
       focusableNodes.forEach( node => {
-        setAttribute( node, TAB_INDEX, ariaHidden ? -1 : null );
+        setAttribute( node, TAB_INDEX, hidden ? -1 : null );
       } );
     }
 
     if ( visible !== hasClass( slide, CLASS_VISIBLE ) ) {
       toggleClass( slide, CLASS_VISIBLE, visible );
-      emit( visible ? EVENT_VISIBLE : EVENT_HIDDEN, this );
+      emit( visible ? EVENT_VISIBLE : EVENT_HIDDEN, self );
     }
   }
 
@@ -230,7 +224,8 @@ export function Slide( Splide: Splide, index: number, slideIndex: number, slide:
    * @return `true` if the slide is active.
    */
   function isActive(): boolean {
-    return Splide.index === index;
+    const { index: curr } = Splide;
+    return curr === index || ( options.cloneStatus && curr === slideIndex );
   }
 
   /**
@@ -269,7 +264,7 @@ export function Slide( Splide: Splide, index: number, slideIndex: number, slide:
     return diff <= distance;
   }
 
-  return {
+  const self = {
     index,
     slideIndex,
     slide,
@@ -277,7 +272,10 @@ export function Slide( Splide: Splide, index: number, slideIndex: number, slide:
     isClone,
     mount,
     destroy,
+    update,
     style,
     isWithin,
   };
+
+  return self;
 }

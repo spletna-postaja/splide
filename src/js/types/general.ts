@@ -1,5 +1,5 @@
-import * as CoreComponents from '../components';
 import { Splide } from '../core/Splide/Splide';
+import { Components } from './components';
 import { Options } from './options';
 
 
@@ -39,12 +39,11 @@ export interface TransitionComponent extends BaseComponent {
 }
 
 /**
- * The type for all component constructors.
+ * The interface for info of a splide instance to sync with.
  *
- * @since 3.0.0
+ * @since 3.2.8
  */
-export type Components = Record<string, BaseComponent>
-  & Partial<{
-    [ K in keyof typeof CoreComponents ]: ReturnType<typeof CoreComponents[ K ]>;
-  }>
-  & { Transition: TransitionComponent }
+export interface SyncTarget {
+  splide: Splide;
+  isParent?: boolean;
+}

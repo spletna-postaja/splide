@@ -5,13 +5,13 @@ import {
   EVENT_MOUNTED,
   EVENT_MOVED,
   EVENT_REFRESH,
-  EVENT_RESIZE,
+  EVENT_RESIZE, EVENT_SCROLLED,
 } from '../../constants/events';
 import { EventInterface } from '../../constructors';
 import { Splide } from '../../core/Splide/Splide';
 import { BaseComponent, Components, Options } from '../../types';
 import {
-  addClass,
+  addClass, child,
   create,
   display,
   getAttribute,
@@ -76,15 +76,21 @@ export function LazyLoad( Splide: Splide, Components: Components, options: Optio
    */
   function mount(): void {
     if ( options.lazyLoad ) {
-      on( [ EVENT_MOUNTED, EVENT_REFRESH ], () => {
-        destroy();
-        init();
-      } );
+      init();
+      on( EVENT_REFRESH, refresh );
 
       if ( ! isSequential ) {
-        on( [ EVENT_MOUNTED, EVENT_REFRESH, EVENT_MOVED ], observe );
+        on( [ EVENT_MOUNTED, EVENT_REFRESH, EVENT_MOVED, EVENT_SCROLLED ], observe );
       }
     }
+  }
+
+  /**
+   * Called when the slider is refreshed.
+   */
+  function refresh(): void {
+    destroy();
+    init();
   }
 
   /**
@@ -97,7 +103,10 @@ export function LazyLoad( Splide: Splide, Components: Components, options: Optio
         const srcset = getAttribute( _img, SRCSET_DATA_ATTRIBUTE );
 
         if ( src !== _img.src || srcset !== _img.srcset ) {
-          const _spinner = create( 'span', options.classes.spinner, _img.parentElement );
+          const className = options.classes.spinner;
+          const parent    = _img.parentElement;
+          const _spinner  = child( parent, `.${ className }` ) || create( 'span', className, parent );
+
           setAttribute( _spinner, ROLE, 'presentation' );
           images.push( { _img, _Slide, src, srcset, _spinner } );
           ! _img.src && display( _img, 'none' );
@@ -167,9 +176,9 @@ export function LazyLoad( Splide: Splide, Components: Components, options: Optio
     const { _Slide } = data;
 
     removeClass( _Slide.slide, CLASS_LOADING );
+    remove( data._spinner );
 
     if ( ! error ) {
-      remove( data._spinner );
       display( data._img, '' );
       emit( EVENT_LAZYLOAD_LOADED, data._img, _Slide );
       emit( EVENT_RESIZE );

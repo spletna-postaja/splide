@@ -34,13 +34,18 @@ export function Layout( Splide: Splide, Components: Components, options: Options
   const { on, bind, emit } = EventInterface( Splide );
   const { Slides } = Components;
   const { resolve } = Components.Direction;
-  const { track, list } = Components.Elements;
+  const { root, track, list } = Components.Elements;
   const { getAt } = Slides;
 
   /**
    * Indicates whether the slider direction is vertical or not.
    */
   let vertical: boolean;
+
+  /**
+   * Keeps the DOMRect object of the root element.
+   */
+  let rootRect: DOMRect;
 
   /**
    * Called when the component is mounted.
@@ -57,9 +62,10 @@ export function Layout( Splide: Splide, Components: Components, options: Options
    * Uses `max-width` for the root to prevent the slider from exceeding the parent element.
    */
   function init(): void {
+    rootRect = null;
     vertical = options.direction === TTB;
 
-    style( Splide.root, 'maxWidth', unit( options.width ) );
+    style( root, 'maxWidth', unit( options.width ) );
     style( track, resolve( 'paddingLeft' ), cssPadding( false ) );
     style( track, resolve( 'paddingRight' ), cssPadding( true ) );
 
@@ -70,13 +76,18 @@ export function Layout( Splide: Splide, Components: Components, options: Options
    * Updates dimensions of some elements when the slider is resized.
    */
   function resize(): void {
-    style( track, 'height', cssTrackHeight() );
+    const newRect = rect( root );
 
-    Slides.style( resolve( 'marginRight' ), unit( options.gap ) );
-    Slides.style( 'width', cssSlideWidth() || null );
-    setSlidesHeight();
+    if ( ! rootRect || rootRect.width !== newRect.width || rootRect.height !== newRect.height ) {
+      style( track, 'height', cssTrackHeight() );
 
-    emit( EVENT_RESIZED );
+      Slides.style( resolve( 'marginRight' ), unit( options.gap ) );
+      Slides.style( 'width', cssSlideWidth() || null );
+      setSlidesHeight();
+
+      rootRect = newRect;
+      emit( EVENT_RESIZED );
+    }
   }
 
   /**
@@ -96,7 +107,7 @@ export function Layout( Splide: Splide, Components: Components, options: Options
    */
   function cssPadding( right: boolean ): string {
     const { padding } = options;
-    const prop = resolve( right ? 'right' : 'left', true );
+    const prop = resolve( right ? 'right' : 'left' );
     return padding && unit( padding[ prop ] || ( isObject( padding ) ? 0 : padding ) ) || '0px';
   }
 
@@ -221,13 +232,14 @@ export function Layout( Splide: Splide, Components: Components, options: Options
 
   /**
    * Returns the padding value.
+   * This method resolves the difference of the direction.
    *
    * @param right - Determines whether to get `paddingRight/Bottom` or `paddingLeft/Top`.
    *
    * @return The padding value in pixel.
    */
   function getPadding( right: boolean ): number {
-    return parseFloat( style( track, resolve( `padding${ right ? 'Right' : 'Left' }`, true ) ) ) || 0;
+    return parseFloat( style( track, resolve( `padding${ right ? 'Right' : 'Left' }` ) ) ) || 0;
   }
 
   return {
