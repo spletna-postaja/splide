@@ -1,8 +1,8 @@
 /*!
  * Splide.js
- * Version  : 3.6.3
+ * Version  : 3.6.12
  * License  : MIT
- * Copyright: 2021 Naotoshi Fujita
+ * Copyright: 2022 Naotoshi Fujita
  */
 'use strict';
 
@@ -594,10 +594,14 @@ function Options(Splide2, Components2, options) {
       Splide2.options = newOptions;
     }
   }
+  function get() {
+    return options;
+  }
   return {
     setup,
     mount,
-    destroy
+    destroy,
+    get
   };
 }
 
@@ -1222,9 +1226,10 @@ function Move(Splide2, Components2, options) {
   }
   function translate(position, preventLoop) {
     if (!Splide2.is(FADE)) {
-      const destination = preventLoop ? position : loop(position);
-      list.style.transform = `translate${resolve("X")}(${destination}px)`;
-      position !== destination && emit(EVENT_SHIFTED);
+      const translateDirection = resolve("X");
+      const translatePosition = preventLoop ? position : loop(position);
+      list.style.transform = `translate3d(${translateDirection === "Y" ? "0" : translatePosition}px, ${translateDirection === "X" ? "0" : translatePosition}px, 0)`;
+      position !== translatePosition && emit(EVENT_SHIFTED);
     }
   }
   function loop(position) {
@@ -1787,12 +1792,12 @@ function Drag(Splide2, Components2, options) {
       const { noDrag } = options;
       const isTouch = isTouchEvent(e);
       const isDraggable = !noDrag || !matches(e.target, noDrag);
+      clickPrevented = false;
       if (isDraggable && (isTouch || !e.button)) {
         if (!Move.isBusy()) {
           target = isTouch ? track : window;
           prevBaseEvent = null;
           lastEvent = null;
-          clickPrevented = false;
           bind(target, POINTER_MOVE_EVENTS, onPointerMove, SCROLL_LISTENER_OPTIONS);
           bind(target, POINTER_UP_EVENTS, onPointerUp, SCROLL_LISTENER_OPTIONS);
           Move.cancel();
@@ -2037,7 +2042,7 @@ function LazyLoad(Splide2, Components2, options) {
     bind(_img, "load error", (e) => {
       onLoad(data, e.type === "error");
     });
-    ["src", "srcset"].forEach((name) => {
+    ["srcset", "src"].forEach((name) => {
       if (data[name]) {
         setAttribute(_img, name, data[name]);
         removeAttribute(_img, name === "src" ? SRC_DATA_ATTRIBUTE : SRCSET_DATA_ATTRIBUTE);
@@ -2047,8 +2052,8 @@ function LazyLoad(Splide2, Components2, options) {
   function onLoad(data, error) {
     const { _Slide } = data;
     removeClass(_Slide.slide, CLASS_LOADING);
-    remove(data._spinner);
     if (!error) {
+      remove(data._spinner);
       display(data._img, "");
       emit(EVENT_LAZYLOAD_LOADED, data._img, _Slide);
       emit(EVENT_RESIZE);

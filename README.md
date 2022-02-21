@@ -10,7 +10,7 @@ Splide is a lightweight, flexible and accessible slider and carousel.<br>
 No dependencies, no Lighthouse errors.
 </p>
 
-[![](https://data.jsdelivr.com/v1/package/npm/@splidejs/splide/badge)](https://www.jsdelivr.com/package/npm/@splidejs/splide)
+[![](https://data.jsdelivr.com/v1/package/npm/@splidejs/splide/badge?v=1)](https://www.jsdelivr.com/package/npm/@splidejs/splide)
 
 <p>
   <a href="https://github.com/Splidejs/splide/releases/latest">Download</a>
@@ -70,6 +70,11 @@ No dependencies, no Lighthouse errors.
 </p>
 </div>
 
+## Support Splide
+
+Please support the project if you like it! 
+- [GitHub Sponsors](https://github.com/sponsors/NaotoshiFujita)
+
 ## Features
 
 - Written in TypeScript
@@ -106,4 +111,4 @@ The Splide slider does not degrade Accessibility, Best Practices and SEO 🎉
 
 ## License
 
-Splide is released under MIT license. © 2021 Naotoshi Fujita
+Splide is released under MIT license. © 2022 Naotoshi Fujita

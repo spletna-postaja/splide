@@ -5,13 +5,15 @@ import {
   EVENT_MOUNTED,
   EVENT_MOVED,
   EVENT_REFRESH,
-  EVENT_RESIZE, EVENT_SCROLLED,
+  EVENT_RESIZE,
+  EVENT_SCROLLED,
 } from '../../constants/events';
 import { EventInterface } from '../../constructors';
 import { Splide } from '../../core/Splide/Splide';
 import { BaseComponent, Components, Options } from '../../types';
 import {
-  addClass, child,
+  addClass,
+  child,
   create,
   display,
   getAttribute,
@@ -158,7 +160,7 @@ export function LazyLoad( Splide: Splide, Components: Components, options: Optio
     addClass( data._Slide.slide, CLASS_LOADING );
     bind( _img, 'load error', e => { onLoad( data, e.type === 'error' ) } );
 
-    [ 'src', 'srcset' ].forEach( name => {
+    [ 'srcset', 'src' ].forEach( name => {
       if ( data[ name ] ) {
         setAttribute( _img, name, data[ name ] );
         removeAttribute( _img, name === 'src' ? SRC_DATA_ATTRIBUTE : SRCSET_DATA_ATTRIBUTE );
@@ -176,9 +178,9 @@ export function LazyLoad( Splide: Splide, Components: Components, options: Optio
     const { _Slide } = data;
 
     removeClass( _Slide.slide, CLASS_LOADING );
-    remove( data._spinner );
 
     if ( ! error ) {
+      remove( data._spinner );
       display( data._img, '' );
       emit( EVENT_LAZYLOAD_LOADED, data._img, _Slide );
       emit( EVENT_RESIZE );

@@ -25,7 +25,7 @@ export interface OptionsComponent extends BaseComponent {
  *
  * @return An Options component object.
  */
-export function Options( Splide: Splide, Components: Components, options: Options ): OptionsComponent {
+export function Options( Splide: Splide, Components: Components, options: Options ): { get: () => Object; setup: () => void; destroy: (completely: boolean) => void; mount: () => void } {
   /**
    * The throttled `observe` function.
    */

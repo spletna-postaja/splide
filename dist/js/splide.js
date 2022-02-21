@@ -1,12 +1,12 @@
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
 /*!
  * Splide.js
- * Version  : 3.6.4
+ * Version  : 3.6.12
  * License  : MIT
- * Copyright: 2021 Naotoshi Fujita
+ * Copyright: 2022 Naotoshi Fujita
  */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() : typeof define === 'function' && define.amd ? define(factory) : (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Splide = factory());
@@ -2154,13 +2154,13 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
         var noDrag = options.noDrag;
         var isTouch = isTouchEvent(e);
         var isDraggable = !noDrag || !matches(e.target, noDrag);
+        clickPrevented = false;
 
         if (isDraggable && (isTouch || !e.button)) {
           if (!Move.isBusy()) {
             target = isTouch ? track : window;
             prevBaseEvent = null;
             lastEvent = null;
-            clickPrevented = false;
             bind(target, POINTER_MOVE_EVENTS, onPointerMove, SCROLL_LISTENER_OPTIONS);
             bind(target, POINTER_UP_EVENTS, onPointerUp, SCROLL_LISTENER_OPTIONS);
             Move.cancel();
@@ -2477,7 +2477,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       bind(_img, "load error", function (e) {
         onLoad(data, e.type === "error");
       });
-      ["src", "srcset"].forEach(function (name) {
+      ["srcset", "src"].forEach(function (name) {
         if (data[name]) {
           setAttribute(_img, name, data[name]);
           removeAttribute(_img, name === "src" ? SRC_DATA_ATTRIBUTE : SRCSET_DATA_ATTRIBUTE);
@@ -2488,9 +2488,9 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     function onLoad(data, error) {
       var _Slide = data._Slide;
       removeClass(_Slide.slide, CLASS_LOADING);
-      remove(data._spinner);
 
       if (!error) {
+        remove(data._spinner);
         display(data._img, "");
         emit(EVENT_LAZYLOAD_LOADED, data._img, _Slide);
         emit(EVENT_RESIZE);
