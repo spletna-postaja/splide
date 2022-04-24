@@ -1,12 +1,13 @@
 {
   "name": "@splidejs/splide",
-  "version": "3.6.12",
+  "version": "4.0.1",
   "description": "Splide is a lightweight, flexible and accessible slider/carousel. No dependencies, no Lighthouse errors.",
   "author": "Naotoshi Fujita",
   "license": "MIT",
   "main": "dist/js/splide.cjs.js",
   "module": "dist/js/splide.esm.js",
   "types": "dist/types/index.d.ts",
+  "svelte": "dist/js/splide.esm.js",
   "jsdelivr": "dist/js/splide.min.js",
   "keywords": [
     "splide",
@@ -62,7 +63,7 @@
     "build:module": "node scripts/build-module.js",
     "build:types": "node scripts/build-types.js",
     "build:css": "node scripts/build-css.js",
-    "build:all": "npm run build:js && npm run build:module && npm run build:css && npm run build:types",
+    "build:all": "npm run build:js && npm run build:module && npm run build:css && npm run build:types && node scripts/build-utils.js",
     "check:types": "tsc --noEmit",
     "jest": "jest --clearCache && jest",
     "eslint": "eslint src",
@@ -84,5 +85,24 @@
     "src/js/transitions",
     "src/js/types",
     "src/js/utils"
-  ]
+  ],
+  "exports": {
+    ".": {
+      "require": "./dist/js/splide.cjs.js",
+      "import": "./dist/js/splide.esm.js",
+      "default": "./dist/js/splide.esm.js"
+    },
+    "./src/js/utils": {
+      "require": "./dist/js/utils/splide-utils.cjs.js",
+      "import": "./dist/js/utils/splide-utils.esm.js",
+      "default": "./dist/js/utils/splide-utils.esm.js",
+      "types": "./src/js/utils/index.ts"
+    },
+    "./css": "./dist/css/splide.min.css",
+    "./css/core": "./dist/css/splide-core.min.css",
+    "./css/*": "./dist/css/themes/splide-*.min.css",
+    "./dist/": "./dist/",
+    "./src/css/template/": "./src/css/template/",
+    "./package.json": "./package.json"
+  }
 }

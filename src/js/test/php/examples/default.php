@@ -16,47 +16,86 @@ $settings = get_settings();
   <link rel="stylesheet" href="../../assets/css/styles.css">
   <script type="text/javascript" src="../../../../../dist/js/splide.js"></script>
 
+<!--	https://cdn.jsdelivr.net/npm/@splidejs/splide@3.6.12/dist/js/splide.min.js-->
+
   <script>
     document.addEventListener( 'DOMContentLoaded', function () {
       var splide = new Splide( '#splide01', {
-        type   : 'loop',
-        perPage: 3,
-        // perMove: 1,
+        width: 800,
+        type        : 'loop',
+        perPage: 2,
         // rewind: true,
-        // padding: {
-        //   right: 0,
-        //   left: 40,
+        // rewindByDrag: true,
+        padding: '3rem',
+        updateOnMove: true,
+        direction: 'ltr',
+        height: undefined,
+        paginationDirection: 'ttb',
+        rewindSpeed: 2000,
+        // role: '',
+        label: '1',
+
+        // breakpoints: {
+        //   1200: {
+        //     // padding: 5,
+        //   },
+        //   1000: {
+        //     label: 'The destroyed carousel',
+        //     destroy: true,
+        //   },
         // },
-        // updateOnMove: true,
-        focus: 'center',
-        noDrag: 'button',
+
+        classes: {
+          arrows: 'splide__arrows custom-arrows',
+          pagination: 'splide__pagination custom-pagination',
+        },
       } );
 
-      splide.on( 'moved', () => {
-        console.log( 'moved' );
-      } );
-
-      splide.on( 'visible', Slide => {
-        console.log( 'visible', Slide.index );
-      } );
-
-      splide.on( 'hidden', Slide => {
-        console.log( 'hidden', Slide.index );
-      } );
-
-      splide.on( 'click', () => {
-        console.log( 'click' );
-      } );
-
-      splide.on( 'shifted', () => {
-        console.log( 'shifted' );
-      } );
+      // splide.on( 'destroy', function () {
+      //     console.log( 'destroy' );
+      // } );
+	    //
+      // splide.on( 'moved', function ( index, prev, dest ) {
+      //   console.log( 'moved', index, prev, dest );
+      // } );
+	    //
+      // splide.on( 'visible', Slide => {
+      //   console.log( 'visible', Slide );
+      // } );
+	    //
+      // splide.on( 'hidden', Slide => {
+      //   console.log( 'hidden', Slide );
+      // } );
+	    //
+      // splide.on( 'click', function () {
+      //   console.log( 'click' );
+      // } );
+	    //
+      // splide.on( 'shifted', function () {
+      //   console.log( 'shifted' );
+      // } );
+	    //
+	    // splide.on( 'drag', function () {
+		  //   console.log( 'drag' );
+	    // } );
+	    //
+	    // splide.on( 'dragged', function () {
+		  //   console.log( 'dragged' );
+	    // } );
 
       splide.mount();
 
-			// Array.from( document.getElementsByTagName( 'button' ) ).forEach( button => {
-			// 	button.addEventListener( 'click', () => alert( 'click' ) );
+	    const pre = document.querySelector( 'pre' );
+
+	    // Array.from( document.getElementsByTagName( 'button' ) ).forEach( button => {
+			// 	button.addEventListener( 'click', function () {
+			// 		alert( 'click' );
+			// 	} );
 			// } );
+
+			// console.log = ( ...args ) => {
+			// 	pre.textContent = args.join( ' ' ) + '\n' + pre.textContent;
+			// };
     } );
   </script>
 
@@ -68,7 +107,7 @@ $settings = get_settings();
 </head>
 <body>
 
-<?php render( 'splide01', 11 ); ?>
+<?php render( 'splide01', 10 ); ?>
 
 <pre></pre>
 

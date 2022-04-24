@@ -4,7 +4,7 @@ import { Splide } from '../../core/Splide/Splide';
 import { AnyFunction, BaseComponent, Components, Options } from '../../types';
 import {
   addClass,
-  append,
+  append, apply,
   before,
   between,
   empty,
@@ -27,7 +27,7 @@ import { Slide, SlideComponent } from './Slide';
  *
  * @since 3.0.0
  */
-export interface  SlidesComponent extends BaseComponent {
+export interface SlidesComponent extends BaseComponent {
   update(): void;
   register( slide: HTMLElement, index: number, slideIndex: number ): void;
   get( excludeClones?: boolean ): SlideComponent[];
@@ -88,7 +88,8 @@ export function Slides( Splide: Splide, Components: Components, options: Options
    */
   function mount(): void {
     init();
-    on( EVENT_REFRESH, refresh );
+    on( EVENT_REFRESH, destroy );
+    on( EVENT_REFRESH, init );
     on( [ EVENT_MOUNTED, EVENT_REFRESH ], () => {
       Slides.sort( ( Slide1, Slide2 ) => Slide1.index - Slide2.index );
     } );
@@ -107,14 +108,6 @@ export function Slides( Splide: Splide, Components: Components, options: Options
   function destroy(): void {
     forEach( Slide => { Slide.destroy() } );
     empty( Slides );
-  }
-
-  /**
-   * Discards all Slide components and regenerates them.
-   */
-  function refresh(): void {
-    destroy();
-    init();
   }
 
   /**
@@ -189,7 +182,7 @@ export function Slides( Splide: Splide, Components: Components, options: Options
         const ref = slides[ index ];
         ref ? before( slide, ref ) : append( list, slide );
         addClass( slide, options.classes.slide );
-        observeImages( slide, emit.bind( null, EVENT_RESIZE ) );
+        observeImages( slide, apply( emit, EVENT_RESIZE ) );
       }
     } );
 
